@@ -76,7 +76,7 @@ terraform init
 terraform plan
 terraform apply
 
-###Terraform Resources Implemented
+### Terraform Resources Implemented
 s3 Bucket (secure-bucket-upload)
 
 SSE enabled (AES256)
