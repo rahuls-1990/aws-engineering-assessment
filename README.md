@@ -1,5 +1,5 @@
-## Results
-
+### Complete Ouput for cfn-nag report
+```
 Warnings count: 0
 ------------------------------------------------------------
 /templates/stack.template
@@ -61,6 +61,7 @@ Warnings count: 0
 ------------------------------------------------------------
 Failures count: 0
 Warnings count: 0
+```
 
 
 ## Terraform Assignment
