@@ -1,17 +1,102 @@
-# Technical Assignments
+### Results
 
-The goal of this assignment is to evaluate your ability to work with Terraform and AWS services. We expect that a developer with some experience should be able to solve this within one to two hours.
-
-Please commit your results to GitHub and send us the URL to your repository, so we can review your work before the interview.
-
-There are two assignments, one with focus on Terraform and one with focus on Cloudformation. So, we expect you to check in Terraform and Cloudformation template files. If you use additional helper frameworks to create the output files, please also check in the code you've written for these frameworks as well.
-
-You'll find the two parts in the folders:
-- terraform
-- cloudformation
-
-We've put together instructions in the README.md files in the two directories. All instructions have been tested on Ubuntu Linux. You are free to use other operating system as long as the checked in code can still be tested on Linux.
+##Terraform Assignment
 
 
-Have fun!
+erraform Setup
+Start LocalStack
+docker-compose up 
 
+Initialize Terraform
+terraform init
+terraform plan
+terraform apply
+
+Terraform Resources Implemented
+s3 Bucket (secure-bucket-upload)
+
+SSE enabled (AES256)
+
+Lifecycle rule: Expire after 90 days
+
+Lambda event notification for file uploads
+
+Block public access
+
+Logging bucket optional
+
+Files:
+terraform/s3.tf
+
+DynamoDB Table
+
+Table name: file-uploads
+Primary key: Filename (String)
+SSE enabled
+Provisioned capacity (5/5)
+
+File:
+terraform/dynamodb.tf
+
+SNS Topic — security-alerts
+
+Purpose: Alert security team if unencrypted resources appear.
+
+Subscription:
+✔ Email: security-team@example.com
+
+Files:
+sns.tf
+
+IAM Roles & Policies
+
+Lambda + Step Function roles with least-privilege:
+
+DynamoDB: PutItem, DescribeTable
+
+SNS: Publish
+
+S3: GetObject
+
+Step Functions execution permissions
+
+File:
+iam.tf
+
+Lambda Function
+
+Located under:
+
+terraform/lambda/handler.py
+terraform/lambda/function.zip
+
+
+Lambda responsibilities:
+
+Log S3 event
+
+Start Step Function execution (future step)
+
+Publish SNS alert if suspicious configuration found
+
+File:
+lambda.tf
+
+Step Functions Workflow
+
+Creates a simple orchestration:
+
+Input validation
+
+DynamoDB write
+
+Error handling
+
+SNS failure notifications
+
+File:
+step-fn.tf
+
+Testing the Pipeline
+Upload a file
+aws --endpoint-url http://localhost:4566 s3 cp test.txt s3://secure-bucket-upload/
