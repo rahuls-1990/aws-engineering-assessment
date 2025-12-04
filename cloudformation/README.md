@@ -46,3 +46,67 @@ docker logs cfn-nag
 ```shell
 docker-compose restart cfn-nag
 ```
+### Complete Ouput for cfn-nag report
+```
+Warnings count: 0
+------------------------------------------------------------
+/templates/stack.template
+------------------------------------------------------------------------------------------------------------------------
+| WARN W51
+|
+| Resource: ["S3Bucket"]
+| Line Numbers: [13]
+|
+| S3 bucket should likely have a bucket policy
+------------------------------------------------------------
+| WARN W35
+|
+| Resource: ["S3Bucket"]
+| Line Numbers: [13]
+|
+| S3 Bucket should have access logging configured
+
+Failures count: 0
+Warnings count: 2
+------------------------------------------------------------
+/templates/stack.template
+------------------------------------------------------------------------------------------------------------------------
+| WARN W51
+|
+| Resource: ["LoggingBucket", "S3Bucket"]
+| Line Numbers: [14, 24]
+|
+| S3 bucket should likely have a bucket policy
+------------------------------------------------------------
+| WARN W35
+|
+| Resource: ["LoggingBucket"]
+| Line Numbers: [14]
+|
+| S3 Bucket should have access logging configured
+------------------------------------------------------------
+| WARN W41
+|
+| Resource: ["LoggingBucket"]
+| Line Numbers: [14]
+|
+| S3 Bucket should have encryption option set
+
+Failures count: 0
+Warnings count: 4
+------------------------------------------------------------
+/templates/stack.template
+------------------------------------------------------------
+Failures count: 0
+Warnings count: 0
+------------------------------------------------------------
+/templates/stack.template
+------------------------------------------------------------
+Failures count: 0
+Warnings count: 0
+------------------------------------------------------------
+/templates/stack.template
+------------------------------------------------------------
+Failures count: 0
+Warnings count: 0
+```
