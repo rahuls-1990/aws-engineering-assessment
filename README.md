@@ -1,9 +1,10 @@
 ### Results
 
-##Terraform Assignment
+
+## Terraform Assignment
 
 
-erraform Setup
+#### Terraform Setup
 Start LocalStack
 docker-compose up 
 
@@ -12,23 +13,18 @@ terraform init
 terraform plan
 terraform apply
 
-Terraform Resources Implemented
+###Terraform Resources Implemented
 s3 Bucket (secure-bucket-upload)
 
 SSE enabled (AES256)
-
 Lifecycle rule: Expire after 90 days
-
 Lambda event notification for file uploads
-
 Block public access
-
-Logging bucket optional
 
 Files:
 terraform/s3.tf
 
-DynamoDB Table
+#### DynamoDB Table
 
 Table name: file-uploads
 Primary key: Filename (String)
@@ -38,7 +34,7 @@ Provisioned capacity (5/5)
 File:
 terraform/dynamodb.tf
 
-SNS Topic — security-alerts
+#### SNS Topic — security-alerts
 
 Purpose: Alert security team if unencrypted resources appear.
 
@@ -48,7 +44,7 @@ Subscription:
 Files:
 sns.tf
 
-IAM Roles & Policies
+#### IAM Roles & Policies
 
 Lambda + Step Function roles with least-privilege:
 
@@ -63,7 +59,7 @@ Step Functions execution permissions
 File:
 iam.tf
 
-Lambda Function
+#### Lambda Function
 
 Located under:
 
@@ -71,7 +67,7 @@ terraform/lambda/handler.py
 terraform/lambda/function.zip
 
 
-Lambda responsibilities:
+#### Lambda responsibilities:
 
 Log S3 event
 
@@ -82,21 +78,13 @@ Publish SNS alert if suspicious configuration found
 File:
 lambda.tf
 
-Step Functions Workflow
+#### Step Functions Workflow
 
 Creates a simple orchestration:
 
 Input validation
-
 DynamoDB write
-
-Error handling
-
 SNS failure notifications
-
 File:
 step-fn.tf
 
-Testing the Pipeline
-Upload a file
-aws --endpoint-url http://localhost:4566 s3 cp test.txt s3://secure-bucket-upload/
