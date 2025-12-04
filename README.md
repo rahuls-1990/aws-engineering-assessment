@@ -73,10 +73,11 @@ Start LocalStack
 docker-compose up 
 
 Initialize Terraform
+```shell
 terraform init
 terraform plan
 terraform apply
-
+```
 ### Terraform Resources Implemented
 s3 Bucket (secure-bucket-upload)
 
@@ -84,7 +85,6 @@ SSE enabled (AES256)
 Lifecycle rule: Expire after 90 days
 Lambda event notification for file uploads
 Block public access
-
 Files:
 terraform/s3.tf
 
