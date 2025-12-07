@@ -66,7 +66,7 @@ Warnings count: 0
 
 ## Terraform Assignment
 
-Note:Some of the Terraform had issues with localstack and I could not complete.
+Note:
 
 #### Terraform Setup
 Start LocalStack

@@ -1,3 +1,4 @@
+from datetime import datetime
 import boto3
 import os
 import json
@@ -14,26 +15,27 @@ def lambda_handler(event, _):
     table = dynamodb.Table(TABLE_NAME)
 
     try:
-        # Extract S3 information
         s3_event = event["Records"][0]["s3"]
         bucket = s3_event["bucket"]["name"]
         key = s3_event["object"]["key"]
 
-        # Write metadata to DynamoDB
+        timestamp = datetime.utcnow().isoformat()
+
+        # FIXED: add UploadTimestamp
         table.put_item(
             Item={
                 "Filename": key,
+                "UploadTimestamp": timestamp,   
                 "Bucket": bucket
             }
         )
 
         alert_message = None
 
-        # Example security condition: file uploaded without encryption
+        # Detect unencrypted uploads
         if not s3_event["object"].get("serverSideEncryption"):
             alert_message = f"Unencrypted file upload detected: {key}"
 
-        # Send SNS alert only if needed
         if alert_message:
             sns.publish(
                 TopicArn=SNS_TOPIC_ARN,
@@ -46,17 +48,16 @@ def lambda_handler(event, _):
             "status": "success",
             "file": key,
             "bucket": bucket,
+            "timestamp": timestamp,
             "alert_sent": bool(alert_message)
         }
 
     except Exception as e:
         print("Error:", str(e))
 
-        # Send SNS alert on failure
         sns.publish(
             TopicArn=SNS_TOPIC_ARN,
             Message=f"Lambda failed: {str(e)}",
             Subject="Lambda Error"
         )
-
         raise

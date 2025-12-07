@@ -9,6 +9,8 @@ services:
       - "4571:4571"
       - "8082:8082"
     environment:
+      - SERVICES=lambda,s3,s3control,dynamodb,iam,sns,stepfunctions,logs
+      - LS_S3_LAMBDA_NOTIFICATION=1
       - USE_LIGHT_IMAGE=0
       - DEBUG=0
       - PORT_WEB_UI=8082

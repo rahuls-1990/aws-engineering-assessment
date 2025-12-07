@@ -49,6 +49,24 @@ resource "aws_lambda_permission" "allow_s3" {
   source_arn    = aws_s3_bucket.uploads.arn
 }
 
+resource "aws_lambda_function" "starter_lambda" {
+  function_name = "file-upload-starter"
+  handler       = "lambda_starter_handler.lambda_handler"
+  runtime       = "python3.12"
+
+  role = aws_iam_role.starter_lambda_role.arn
+
+  filename         = "${path.module}/lambda/lambda_starter.zip"
+  source_code_hash = filebase64sha256("${path.module}/lambda/lambda_starter.zip")
+
+  environment {
+    variables = {
+      STATE_MACHINE_ARN = aws_sfn_state_machine.file_workflow.arn
+    }
+  }
+}
+
+
 output "lambda_arn" {
   value = aws_lambda_function.file_processor.arn
 }
