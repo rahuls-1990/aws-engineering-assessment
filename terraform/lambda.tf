@@ -1,7 +1,19 @@
+# CloudWatch log group for the Lambda function
+resource "aws_cloudwatch_log_group" "file_processor_logs" {
+  name              = "/aws/lambda/file-processor"
+  retention_in_days = 3
+
+  tags = {
+    Environment = "demo"
+    Owner       = "assessment"
+    ManagedBy   = "Terraform"
+  }
+}
+
 resource "aws_lambda_function" "file_processor" {
   function_name = "file-processor"
   handler       = "handler.lambda_handler"
-  runtime       = "python3.12" # updated from 3.9
+  runtime       = "python3.12"
 
   role = aws_iam_role.lambda_role.arn
 
@@ -15,6 +27,11 @@ resource "aws_lambda_function" "file_processor" {
     }
   }
 
+  # Ensure log group exists before Lambda executes
+  depends_on = [
+    aws_cloudwatch_log_group.file_processor_logs
+  ]
+
   tags = {
     Environment = "demo"
     Owner       = "assessment"
@@ -23,7 +40,7 @@ resource "aws_lambda_function" "file_processor" {
   }
 }
 
-# Allow S3 to invoke this Lambda when new objects are created
+# Allow S3 to invoke this Lambda
 resource "aws_lambda_permission" "allow_s3" {
   statement_id  = "AllowS3Invoke"
   action        = "lambda:InvokeFunction"
@@ -35,4 +52,3 @@ resource "aws_lambda_permission" "allow_s3" {
 output "lambda_arn" {
   value = aws_lambda_function.file_processor.arn
 }
-
