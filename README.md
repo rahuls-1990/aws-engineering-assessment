@@ -79,76 +79,166 @@ terraform plan
 terraform apply
 ```
 ### Terraform Resources Implemented
-s3 Bucket (secure-bucket-upload)
 
-SSE enabled (AES256)
-Lifecycle rule: Expire after 90 days
-Lambda event notification for file uploads
-Block public access
-Files:
-terraform/s3.tf
+```shell
+terraform state list
+aws_cloudwatch_log_group.file_processor_logs
+aws_dynamodb_table.file_uploads
+aws_iam_role.lambda_role
+aws_iam_role.starter_lambda_role
+aws_iam_role.stepfn_role
+aws_iam_role_policy.lambda_policy
+aws_iam_role_policy.starter_lambda_policy
+aws_iam_role_policy.stepfn_policy
+aws_lambda_function.file_processor
+aws_lambda_function.starter_lambda
+aws_lambda_permission.allow_s3
+aws_lambda_permission.allow_s3_to_starter
+aws_s3_bucket.uploads
+aws_s3_bucket_notification.upload_events
+aws_s3_bucket_notification.upload_events_starter
+aws_s3_bucket_policy.uploads_tls_policy
+aws_s3_bucket_public_access_block.uploads_public_access
+aws_s3_bucket_server_side_encryption_configuration.uploads_sse
+aws_s3_bucket_versioning.uploads_versioning
+aws_sfn_state_machine.file_workflow
+aws_sns_topic.security_alerts
+aws_sns_topic_subscription.security_alerts_email
+```
 
-#### DynamoDB Table
+### 
 
-Table name: file-uploads
-Primary key: Filename (String)
-SSE enabled
-Provisioned capacity (5/5)
+        1. S3 Bucket — secure-bucket-upload
 
-File:
-terraform/dynamodb.tf
+        Security & Compliance:
 
-#### SNS Topic — security-alerts
+        ✔ Server-side encryption (AES256)
 
-Purpose: Alert security team if unencrypted resources appear.
+        ✔ Bucket versioning enabled
 
-Subscription:
-✔ Email: security-team@example.com
+        ✔ TLS-only access enforced (aws:SecureTransport)
 
-Files:
-sns.tf
+        ✔ Full public access block
 
-#### IAM Roles & Policies
+        ✔ 90-day lifecycle expiration
 
-Lambda + Step Function roles with least-privilege:
+        ✔ Event notifications to two Lambdas (starter + processor)
 
-DynamoDB: PutItem, DescribeTable
+        File: terraform/s3.tf
 
-SNS: Publish
+        2. DynamoDB Table — file-uploads
 
-S3: GetObject
+        Schema:
 
-Step Functions execution permissions
+        Attribute	Type
+        Filename	S
+        UploadTimestamp	S
 
-File:
-iam.tf
+        Features:
 
-#### Lambda Function
+        PAY_PER_REQUEST
 
-Located under:
+        Server-side encryption
 
-terraform/lambda/handler.py
-terraform/lambda/function.zip
+        Point-in-time recovery
 
+        File: terraform/dynamodb.tf
 
-#### Lambda responsibilities:
+        3. SNS Topic — security-alerts
 
-Log S3 event
+        Used for:
 
-Start Step Function execution (future step)
+        reporting unencrypted uploads
 
-Publish SNS alert if suspicious configuration found
+        lambda errors
 
-File:
-lambda.tf
+        Step Function failures
 
-#### Step Functions Workflow
+        An email subscription is included.
 
-Creates a simple orchestration:
+        File: terraform/sns.tf
 
-Input validation
-DynamoDB write
-SNS failure notifications
-File:
-step-fn.tf
+        4. IAM Roles & Policies
 
+        Principle of least privilege implemented for:
+
+        → Starter Lambda Role
+
+        states:StartExecution
+
+        CloudWatch Logs permissions
+
+        → Processor Lambda Role
+
+        dynamodb:PutItem
+
+        sns:Publish
+
+        CloudWatch Logs permissions
+
+        → Step Functions Role
+
+        lambda:InvokeFunction
+
+        sns:Publish (on workflow errors)
+
+        File: terraform/iam.tf
+
+        5. Lambda Functions
+
+        A. Starter Lambda — file-upload-starter
+
+        Files:
+
+        terraform/lambda/lambda_starter_handler.py
+        
+        Responsibilities:
+
+        Receive S3 event
+
+        Start Step Function execution
+
+        Log execution ARN
+
+        Ensure unified workflow handling
+
+        B. Processor Lambda — file-processor
+
+        Files:
+
+        terraform/lambda/handler.py
+        terraform/lambda/function.zip
+
+        Responsibilities:
+
+            Parse file metadata
+
+            Write entry to DynamoDB
+
+            Detect missing encryption
+
+            Publish SNS alerts
+
+            Respond with structured output for Step Functions
+
+            6. Step Functions Workflow — file-upload-workflow
+
+            Workflow definition includes:
+
+            ✔ ProcessFile Task
+
+            Invokes processor Lambda
+
+            Retries with exponential backoff
+
+            ✔ CheckAlert Choice State
+
+            Branching based on:
+
+            { "alert_sent": true | false }
+
+            ✔ NotifyFailure Task
+
+            SNS publish on workflow errors
+
+            File: terraform/step-fn.tf
