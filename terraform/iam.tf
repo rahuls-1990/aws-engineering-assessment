@@ -4,9 +4,9 @@ resource "aws_iam_role" "lambda_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
+      Effect    = "Allow",
       Principal = { Service = "lambda.amazonaws.com" },
-      Action   = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }
@@ -18,18 +18,31 @@ resource "aws_iam_role_policy" "lambda_policy" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
+      # DynamoDB permissions
       {
         Effect = "Allow",
         Action = [
-          "dynamodb:PutItem",
-          "dynamodb:DescribeTable"
+          "dynamodb:PutItem"
         ],
         Resource = aws_dynamodb_table.file_uploads.arn
       },
+
+      # SNS Publish permissions
+      {
+        Effect   = "Allow",
+        Action   = "sns:Publish",
+        Resource = aws_sns_topic.security_alerts.arn
+      },
+
+      # CloudWatch logging permissions (REQUIRED)
       {
         Effect = "Allow",
-        Action = "sns:Publish",
-        Resource = aws_sns_topic.security_alerts.arn    # FIXED
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Resource = "arn:aws:logs:*:*:*"
       }
     ]
   })

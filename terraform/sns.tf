@@ -7,3 +7,4 @@ resource "aws_sns_topic_subscription" "security_alerts_email" {
   protocol  = "email"
   endpoint  = "security-team@example.com"
 }
+

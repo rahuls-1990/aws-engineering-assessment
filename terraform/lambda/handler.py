@@ -1,38 +1,62 @@
 import boto3
 import os
 import json
-import datetime
 
-sns = boto3.client("sns")
-dynamo = boto3.client("dynamodb")
+dynamodb = boto3.resource('dynamodb')
+sns = boto3.client('sns')
 
-def lambda_handler(event, context):
-    print("Event:", json.dumps(event))
+TABLE_NAME = os.environ["DDB_TABLE_NAME"]
+SNS_TOPIC_ARN = os.environ["SNS_TOPIC_ARN"]
 
-    topic_arn = os.environ["SNS_TOPIC_ARN"]
+def lambda_handler(event, _):
+    print("Received event:", json.dumps(event))
 
-    # Check encryption compliance
-    s3_records = event.get("Records", [])
-    if not s3_records:
-        return {"status": "no records"}
+    table = dynamodb.Table(TABLE_NAME)
 
-    bucket = s3_records[0]["s3"]["bucket"]["name"]
-    key = s3_records[0]["s3"]["object"]["key"]
+    try:
+        # Extract S3 information
+        s3_event = event["Records"][0]["s3"]
+        bucket = s3_event["bucket"]["name"]
+        key = s3_event["object"]["key"]
 
-    # Write file entry to DynamoDB
-    dynamo.put_item(
-        TableName="file-uploads",
-        Item={
-            "Filename": {"S": key},
-            "Timestamp": {"S": str(datetime.datetime.utcnow())},
+        # Write metadata to DynamoDB
+        table.put_item(
+            Item={
+                "Filename": key,
+                "Bucket": bucket
+            }
+        )
+
+        alert_message = None
+
+        # Example security condition: file uploaded without encryption
+        if not s3_event["object"].get("serverSideEncryption"):
+            alert_message = f"Unencrypted file upload detected: {key}"
+
+        # Send SNS alert only if needed
+        if alert_message:
+            sns.publish(
+                TopicArn=SNS_TOPIC_ARN,
+                Message=alert_message,
+                Subject="Security Alert: Unencrypted Upload"
+            )
+            print("Security alert sent:", alert_message)
+
+        return {
+            "status": "success",
+            "file": key,
+            "bucket": bucket,
+            "alert_sent": bool(alert_message)
         }
-    )
 
-    return {"status": "success"}
-    # Send SNS notification
-    message = f"File {key} uploaded to bucket {bucket}."
-    sns.publish(
-        TopicArn=topic_arn,
-        Message=message,
-        Subject="S3 File Upload Notification"
-    )   
+    except Exception as e:
+        print("Error:", str(e))
+
+        # Send SNS alert on failure
+        sns.publish(
+            TopicArn=SNS_TOPIC_ARN,
+            Message=f"Lambda failed: {str(e)}",
+            Subject="Lambda Error"
+        )
+
+        raise
