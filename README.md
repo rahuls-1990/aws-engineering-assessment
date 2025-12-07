@@ -242,3 +242,45 @@ aws_sns_topic_subscription.security_alerts_email
             SNS publish on workflow errors
 
             File: terraform/step-fn.tf
+
+
+┌──────────────────────────┐
+│     S3 Bucket Upload      │
+│   secure-bucket-upload    │
+└──────────────┬───────────┘
+               │ S3 Event: ObjectCreated:*
+               ▼
+┌──────────────────────────┐
+│   Starter Lambda          │
+│ file-upload-starter       │
+│ (Starts Step Functions)   │
+└──────────────┬───────────┘
+               │ start_execution()
+               ▼
+┌───────────────────────────────────────┐
+│      Step Function Workflow           │
+│      file-upload-workflow             │
+│---------------------------------------│
+│ Start → ProcessFile → CheckAlert → End│
+│ Retry + Catch + SNS failure handling  │
+└──────────────┬───────────────────────┘
+               │ invokes Lambda
+               ▼
+┌──────────────────────────┐
+│   Processor Lambda        │
+│     file-processor        │
+└──────────────┬───────────┘
+               │
+      ┌────────┴──────────────┐
+      ▼                        ▼
+┌───────────────┐      ┌──────────────────┐
+│ DynamoDB Table │      │   SNS Alerts     │
+│  file-uploads  │      │ security-alerts  │
+└───────────────┘      └──────────────────┘
+
+Flow Summary:
+1️⃣ S3 upload triggers Starter Lambda  
+2️⃣ Starter Lambda triggers Step Functions  
+3️⃣ Step Functions → Processor Lambda  
+4️⃣ Lambda writes DynamoDB + SNS alerts  
+5️⃣ Step Functions handles success/failure paths  
