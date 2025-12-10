@@ -18,6 +18,7 @@ resource "aws_lambda_function" "file_processor" {
   role             = aws_iam_role.lambda_role.arn
   timeout          = 30
   memory_size      = 256
+  reserved_concurrent_executions = 5 
 
   filename         = "${path.module}/lambda/function.zip"
   source_code_hash = filebase64sha256("${path.module}/lambda/function.zip")
@@ -48,6 +49,7 @@ resource "aws_lambda_function" "starter_lambda" {
   role             = aws_iam_role.starter_lambda_role.arn
   timeout          = 10
   memory_size      = 128
+  reserved_concurrent_executions = 5
 
   filename         = "${path.module}/lambda/lambda_starter.zip"
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda_starter.zip")
