@@ -14,11 +14,19 @@ resource "aws_dynamodb_table" "file_uploads" {
     type = "S"
   }
 
-  # Required for localstack stability
   table_class = "STANDARD"
 
-  
   server_side_encryption {
     enabled = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Environment = "demo"
+    Owner       = "assessment"
+    ManagedBy   = "Terraform"
   }
 }
