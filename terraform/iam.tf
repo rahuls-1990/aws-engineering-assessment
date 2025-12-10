@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 resource "aws_iam_role" "lambda_role" {
   name = "file-workflow-lambda-role"
 
@@ -18,23 +20,16 @@ resource "aws_iam_role_policy" "lambda_policy" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
-      # DynamoDB permissions
       {
         Effect = "Allow",
-        Action = [
-          "dynamodb:PutItem"
-        ],
+        Action = ["dynamodb:PutItem"],
         Resource = aws_dynamodb_table.file_uploads.arn
       },
-
-      # SNS Publish permissions
       {
         Effect   = "Allow",
         Action   = "sns:Publish",
         Resource = aws_sns_topic.security_alerts.arn
       },
-
-      # CloudWatch logging permissions (REQUIRED)
       {
         Effect = "Allow",
         Action = [
@@ -42,7 +37,7 @@ resource "aws_iam_role_policy" "lambda_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ],
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/*"
       }
     ]
   })
@@ -80,7 +75,7 @@ resource "aws_iam_role_policy" "starter_lambda_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ],
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/*"
       }
     ]
   })
