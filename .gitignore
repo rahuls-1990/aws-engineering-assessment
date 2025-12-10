@@ -1,5 +1,28 @@
-temp
+# Terraform
 .terraform/
-.idea/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.*
+*.tfstate
+*.tfstate.*
+
+# Local tooling
+*.log
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
 .venv/
-.env/
+
+# Lambda packages
+*.zip
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Test artifacts
+test.txt
+test2.txt
