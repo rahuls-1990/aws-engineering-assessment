@@ -17,8 +17,8 @@ resource "aws_dynamodb_table" "file_uploads" {
   # Required for localstack stability
   table_class = "STANDARD"
 
-  # Disable encryption — localstack v1.3.1 has a bug here
+  
   server_side_encryption {
-    enabled = false
+    enabled = true
   }
 }
