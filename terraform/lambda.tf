@@ -1,4 +1,4 @@
-# CloudWatch log group for the Lambda function
+
 resource "aws_cloudwatch_log_group" "file_processor_logs" {
   name              = "/aws/lambda/file-processor"
   retention_in_days = 3
@@ -15,7 +15,9 @@ resource "aws_lambda_function" "file_processor" {
   handler       = "handler.lambda_handler"
   runtime       = "python3.12"
 
-  role = aws_iam_role.lambda_role.arn
+  role             = aws_iam_role.lambda_role.arn
+  timeout          = 30
+  memory_size      = 256
 
   filename         = "${path.module}/lambda/function.zip"
   source_code_hash = filebase64sha256("${path.module}/lambda/function.zip")
@@ -27,26 +29,15 @@ resource "aws_lambda_function" "file_processor" {
     }
   }
 
-  # Ensure log group exists before Lambda executes
   depends_on = [
     aws_cloudwatch_log_group.file_processor_logs
   ]
-
-  tags = {
-    Environment = "demo"
-    Owner       = "assessment"
-    Purpose     = "S3 file processing"
-    ManagedBy   = "Terraform"
-  }
 }
 
-# Allow S3 to invoke this Lambda
-resource "aws_lambda_permission" "allow_s3" {
-  statement_id  = "AllowS3Invoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.file_processor.function_name
-  principal     = "s3.amazonaws.com"
-  source_arn    = aws_s3_bucket.uploads.arn
+
+resource "aws_cloudwatch_log_group" "starter_lambda_logs" {
+  name              = "/aws/lambda/file-upload-starter"
+  retention_in_days = 7
 }
 
 resource "aws_lambda_function" "starter_lambda" {
@@ -54,7 +45,9 @@ resource "aws_lambda_function" "starter_lambda" {
   handler       = "lambda_starter_handler.lambda_handler"
   runtime       = "python3.12"
 
-  role = aws_iam_role.starter_lambda_role.arn
+  role             = aws_iam_role.starter_lambda_role.arn
+  timeout          = 10
+  memory_size      = 128
 
   filename         = "${path.module}/lambda/lambda_starter.zip"
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda_starter.zip")
@@ -64,9 +57,24 @@ resource "aws_lambda_function" "starter_lambda" {
       STATE_MACHINE_ARN = aws_sfn_state_machine.file_workflow.arn
     }
   }
+
+  depends_on = [
+    aws_cloudwatch_log_group.starter_lambda_logs
+  ]
 }
 
+resource "aws_lambda_permission" "allow_s3_to_starter" {
+  statement_id  = "AllowS3InvokeStarter"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.starter_lambda.function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.uploads.arn
+}
 
-output "lambda_arn" {
+output "processor_lambda_arn" {
   value = aws_lambda_function.file_processor.arn
+}
+
+output "starter_lambda_arn" {
+  value = aws_lambda_function.starter_lambda.arn
 }
