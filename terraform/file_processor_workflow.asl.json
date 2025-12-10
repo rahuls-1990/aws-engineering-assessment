@@ -1,0 +1,61 @@
+{
+  "Comment": "File upload processing workflow with Lambda + SNS alerts",
+  "StartAt": "ProcessFile",
+  "States": {
+    "ProcessFile": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "${processor_lambda_arn}",
+        "Payload.$": "$"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
+          "Next": "NotifyFailure"
+        }
+      ],
+      "Next": "CheckAlert"
+    },
+    "CheckAlert": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.alert_sent",
+          "BooleanEquals": true,
+          "Next": "AlertHandled"
+        }
+      ],
+      "Default": "NoAlert"
+    },
+    "AlertHandled": {
+      "Type": "Succeed"
+    },
+    "NoAlert": {
+      "Type": "Succeed"
+    },
+    "NotifyFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "${sns_topic_arn}",
+        "Message.$": "States.Format('Step Function failed: {}', $.error)"
+      },
+      "End": true
+    }
+  }
+}

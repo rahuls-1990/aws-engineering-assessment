@@ -21,21 +21,24 @@ resource "aws_iam_role_policy" "stepfn_policy" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
-      # Allow Step Functions to invoke the Lambda
       {
         Effect = "Allow",
-        Action = [
-          "lambda:InvokeFunction"
-        ],
+        Action = ["lambda:InvokeFunction"],
         Resource = aws_lambda_function.file_processor.arn
       },
-      # Allow Step Functions to publish SNS (on workflow failure)
+      {
+        Effect = "Allow",
+        Action = ["sns:Publish"],
+        Resource = aws_sns_topic.security_alerts.arn
+      },
       {
         Effect = "Allow",
         Action = [
-          "sns:Publish"
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
         ],
-        Resource = aws_sns_topic.security_alerts.arn
+        Resource = "arn:aws:logs:*:*:*"
       }
     ]
   })
@@ -45,66 +48,10 @@ resource "aws_iam_role_policy" "stepfn_policy" {
 resource "aws_sfn_state_machine" "file_workflow" {
   name     = "file-upload-workflow"
   role_arn = aws_iam_role.stepfn_role.arn
+  type     = "STANDARD"
 
-  definition = jsonencode({
-    Comment = "File upload processing workflow with Lambda + SNS alerts",
-    StartAt = "ProcessFile",
-    States = {
-      ProcessFile = {
-        Type       = "Task",
-        Resource   = "arn:aws:states:::lambda:invoke",
-        OutputPath = "$.Payload",
-        Parameters = {
-          "FunctionName" = aws_lambda_function.file_processor.arn,
-          "Payload.$"    = "$"
-        },
-        Retry = [
-          {
-            ErrorEquals     = ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
-            IntervalSeconds = 2,
-            MaxAttempts     = 3,
-            BackoffRate     = 2.0
-          }
-        ],
-        Catch = [
-          {
-            ErrorEquals = ["States.ALL"],
-            ResultPath  = "$.error",
-            Next        = "NotifyFailure"
-          }
-        ],
-        Next = "CheckAlert"
-      },
-
-      CheckAlert = {
-        Type = "Choice",
-        Choices = [
-          {
-            Variable      = "$.alert_sent",
-            BooleanEquals = true,
-            Next          = "AlertHandled"
-          }
-        ],
-        Default = "NoAlert"
-      },
-
-      AlertHandled = {
-        Type = "Succeed"
-      },
-
-      NoAlert = {
-        Type = "Succeed"
-      },
-
-      NotifyFailure = {
-        Type     = "Task",
-        Resource = "arn:aws:states:::sns:publish",
-        Parameters = {
-          "TopicArn"  = aws_sns_topic.security_alerts.arn,
-          "Message.$" = "States.Format('Step Function failed: {}', $.error)"
-        },
-        End = true
-      }
-    }
+  definition = templatefile("${path.module}/file_processor_workflow.asl.json", {
+    processor_lambda_arn = aws_lambda_function.file_processor.arn
+    sns_topic_arn        = aws_sns_topic.security_alerts.arn
   })
 }
