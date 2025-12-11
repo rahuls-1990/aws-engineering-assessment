@@ -1,12 +1,15 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Cloudformation template for creating AWS S3 Bucket
+Description: End-to-end serverless file-processing workflow (S3 → Lambda → Step Functions → DynamoDB + SNS)
 
 Parameters:
   BucketName:
     Type: String
-    Description: Name for s3 bucket (Name must begin and end with a letter or number and consist only of lowercase letters, numbers, and hyphens (-).)
+    Description: Base name for the S3 bucket
     AllowedPattern: (?=^.{3,63}$)^[a-z0-9][a-z0-9-]*[a-z0-9]
-    ConstraintDescription: Name must begin and end with a letter or number and consist only of lowercase letters, numbers, and hyphens (-).
+  
+  AlertEmail:
+    Type: String
+    Description: Email address for SNS alerts
 
 Resources:
 
@@ -16,9 +19,9 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: W35
-            reason: "Logging bucket does not need access logging"
+            reason: "Access logging bucket does not need its own logs"
     Properties:
-      BucketName: !Sub ${BucketName}-logs
+      BucketName: !Sub "${BucketName}-logs"
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -40,28 +43,33 @@ Resources:
             Principal: "*"
             Action: "s3:*"
             Resource:
-              - !Sub arn:aws:s3:::${BucketName}-logs
-              - !Sub arn:aws:s3:::${BucketName}-logs/*
+              - !GetAtt LoggingBucket.Arn
+              - !Sub "${LoggingBucket.Arn}/*"
             Condition:
               Bool:
                 "aws:SecureTransport": false
 
-  S3Bucket:
+
+  UploadsBucket:
     Type: AWS::S3::Bucket
-    Properties: 
-      BucketName: !Sub ${BucketName}-s3
+    Properties:
+      BucketName: !Sub "${BucketName}-uploads"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+
       LoggingConfiguration:
         DestinationBucketName: !Ref LoggingBucket
-        LogFilePrefix: access-logs/
+        LogFilePrefix: "access-logs/"
 
-  S3BucketPolicy:
+      VersioningConfiguration:
+        Status: Enabled
+
+  UploadsBucketTLSPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref S3Bucket
+      Bucket: !Ref UploadsBucket
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -69,13 +77,211 @@ Resources:
             Principal: "*"
             Action: "s3:*"
             Resource:
-              - !Sub arn:aws:s3:::${BucketName}-s3
-              - !Sub arn:aws:s3:::${BucketName}-s3/*
+              - !GetAtt UploadsBucket.Arn
+              - !Sub "${UploadsBucket.Arn}/*"
             Condition:
               Bool:
                 "aws:SecureTransport": false
 
+  FileUploadsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: file-uploads
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: Filename
+          AttributeType: S
+        - AttributeName: UploadTimestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Filename
+          KeyType: HASH
+        - AttributeName: UploadTimestamp
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  SecurityAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: security-alerts
+
+  SecurityAlertsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+      TopicArn: !Ref SecurityAlertsTopic
+
+
+  # Lambda Processor Role
+  LambdaProcessorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: lambda-file-processor-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: lambda-dynamodb-sns-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: dynamodb:PutItem
+                Resource: !GetAtt FileUploadsTable.Arn
+              - Effect: Allow
+                Action: sns:Publish
+                Resource: !Ref SecurityAlertsTopic
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+
+  # Lambda Starter Role
+  LambdaStarterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: lambda-starter-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: lambda-stepfn-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: states:StartExecution
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+
+  # Step Functions Role
+  StepFunctionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: step-functions-file-workflow-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: stepfn-lambda-sns-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: "*"
+              - Effect: Allow
+                Action: sns:Publish
+                Resource: !Ref SecurityAlertsTopic
+
+
+
+  FileProcessorFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: file-processor
+      Runtime: python3.12
+      Handler: handler.lambda_handler
+      Role: !GetAtt LambdaProcessorRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Code:
+        S3Bucket: placeholder-code-bucket
+        S3Key: file-processor.zip
+      Environment:
+        Variables:
+          DDB_TABLE_NAME: !Ref FileUploadsTable
+          SNS_TOPIC_ARN: !Ref SecurityAlertsTopic
+
+  StarterLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: file-upload-starter
+      Runtime: python3.12
+      Handler: lambda_starter_handler.lambda_handler
+      Role: !GetAtt LambdaStarterRole.Arn
+      Timeout: 10
+      MemorySize: 128
+      Code:
+        S3Bucket: placeholder-code-bucket
+        S3Key: starter-lambda.zip
+      Environment:
+        Variables:
+          STATE_MACHINE_ARN: !Ref FileWorkflowStateMachine
+
+  AllowS3InvokeStarterLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref StarterLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt UploadsBucket.Arn
+
+
+  S3BucketNotification:
+    Type: AWS::S3::BucketNotification
+    Properties:
+      Bucket: !Ref UploadsBucket
+      LambdaConfigurations:
+        - Event: "s3:ObjectCreated:*"
+          Filter:
+            S3Key:
+              Rules:
+                - Name: prefix
+                  Value: "incoming/"
+          Function: !GetAtt StarterLambdaFunction.Arn
+    DependsOn:
+      - AllowS3InvokeStarterLambda
+
+
+  FileWorkflowStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: file-upload-workflow
+      RoleArn: !GetAtt StepFunctionsRole.Arn
+      Definition:
+        StartAt: ProcessFile
+        States:
+          ProcessFile:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: !Ref FileProcessorFunction
+              Payload:
+                bucket.$: "$.bucket"
+                key.$: "$.key"
+            Next: Done
+          Done:
+            Type: Succeed
+
 Outputs:
-  BucketARN:
-    Description: The arn for the bucket that got created
-    Value: !GetAtt S3Bucket.Arn
+  UploadsBucketName:
+    Description: S3 bucket for uploads
+    Value: !Ref UploadsBucket
+
+  StateMachineArn:
+    Description: ARN of the workflow state machine
+    Value: !Ref FileWorkflowStateMachine
