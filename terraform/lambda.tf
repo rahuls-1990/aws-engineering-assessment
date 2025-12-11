@@ -11,12 +11,12 @@ resource "aws_cloudwatch_log_group" "file_processor_logs" {
 
 resource "aws_lambda_function" "file_processor" {
   function_name = "file-processor"
-  handler       = "handler.lambda_handler"
+  handler       = "processor_lambda.lambda_handler"
   runtime       = "python3.12"
 
   role                           = aws_iam_role.lambda_role.arn
-  timeout                        = 30
-  memory_size                    = 256
+  timeout                        = var.processor_lambda_timeout
+  memory_size                    = var.processor_lambda_memory
   reserved_concurrent_executions = 5
 
   filename         = "${path.module}/lambda/function.zip"
@@ -29,6 +29,10 @@ resource "aws_lambda_function" "file_processor" {
     }
   }
 
+  dead_letter_config {
+    target_arn = aws_sqs_queue.processor_lambda_dlq.arn
+  }
+
   depends_on = [aws_cloudwatch_log_group.file_processor_logs]
 }
 
@@ -39,7 +43,7 @@ resource "aws_cloudwatch_log_group" "starter_lambda_logs" {
 
 resource "aws_lambda_function" "starter_lambda" {
   function_name = "file-upload-starter"
-  handler       = "lambda_starter_handler.lambda_handler"
+  handler       = "starter_lambda.lambda_handler"
   runtime       = "python3.12"
   role          = aws_iam_role.starter_lambda_role.arn
 
@@ -54,6 +58,10 @@ resource "aws_lambda_function" "starter_lambda" {
     variables = {
       STATE_MACHINE_ARN = aws_sfn_state_machine.file_workflow.arn
     }
+  }
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.starter_lambda_dlq.arn
   }
 
   depends_on = [

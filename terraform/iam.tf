@@ -22,7 +22,7 @@ resource "aws_iam_role_policy" "lambda_policy" {
     Statement = [
       {
         Effect   = "Allow",
-        Action   = ["dynamodb:PutItem"],
+        Action   = ["dynamodb:PutItem", "dynamodb:DescribeTable"],
         Resource = aws_dynamodb_table.file_uploads.arn
       },
       {
@@ -33,11 +33,27 @@ resource "aws_iam_role_policy" "lambda_policy" {
       {
         Effect = "Allow",
         Action = [
+          "s3:GetObject",
+          "s3:GetObjectAttributes", 
+          "s3:HeadObject"
+        ],
+        Resource = "${aws_s3_bucket.uploads.arn}/*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ],
         Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "sqs:SendMessage"
+        ],
+        Resource = aws_sqs_queue.processor_lambda_dlq.arn
       }
     ]
   })
@@ -76,6 +92,13 @@ resource "aws_iam_role_policy" "starter_lambda_policy" {
           "logs:PutLogEvents"
         ],
         Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "sqs:SendMessage"
+        ],
+        Resource = aws_sqs_queue.starter_lambda_dlq.arn
       }
     ]
   })

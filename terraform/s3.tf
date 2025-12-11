@@ -31,6 +31,31 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "uploads_sse" {
 
 resource "aws_s3_bucket" "uploads_logs" {
   bucket = "${var.uploads_bucket_name}-logs"
+
+  tags = {
+    Environment = "demo"
+    Owner       = "assessment"
+    ManagedBy   = "Terraform"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "uploads_logs_sse" {
+  bucket = aws_s3_bucket.uploads_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "uploads_logs_public_access" {
+  bucket = aws_s3_bucket.uploads_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 resource "aws_s3_bucket_logging" "uploads_logging" {
@@ -46,6 +71,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads_lifecycle" {
   rule {
     id     = "expire-old-versions"
     status = "Enabled"
+
+    filter {}
 
     noncurrent_version_expiration {
       noncurrent_days = 90

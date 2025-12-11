@@ -38,7 +38,7 @@ resource "aws_iam_role_policy" "stepfn_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ],
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/stepfunctions/*"
       }
     ]
   })
