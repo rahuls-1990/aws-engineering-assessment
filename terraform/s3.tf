@@ -73,8 +73,8 @@ resource "aws_s3_bucket_policy" "uploads_tls_policy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Sid    = "EnforceTLS"
-      Effect = "Deny"
+      Sid       = "EnforceTLS"
+      Effect    = "Deny"
       Principal = "*"
       Action    = "s3:*"
       Resource = [

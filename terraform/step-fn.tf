@@ -22,13 +22,13 @@ resource "aws_iam_role_policy" "stepfn_policy" {
     Version = "2012-10-17",
     Statement = [
       {
-        Effect = "Allow",
-        Action = ["lambda:InvokeFunction"],
+        Effect   = "Allow",
+        Action   = ["lambda:InvokeFunction"],
         Resource = aws_lambda_function.file_processor.arn
       },
       {
-        Effect = "Allow",
-        Action = ["sns:Publish"],
+        Effect   = "Allow",
+        Action   = ["sns:Publish"],
         Resource = aws_sns_topic.security_alerts.arn
       },
       {

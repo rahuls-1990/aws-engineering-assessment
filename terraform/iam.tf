@@ -21,8 +21,8 @@ resource "aws_iam_role_policy" "lambda_policy" {
     Version = "2012-10-17",
     Statement = [
       {
-        Effect = "Allow",
-        Action = ["dynamodb:PutItem"],
+        Effect   = "Allow",
+        Action   = ["dynamodb:PutItem"],
         Resource = aws_dynamodb_table.file_uploads.arn
       },
       {
