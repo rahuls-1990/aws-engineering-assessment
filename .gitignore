@@ -4,23 +4,44 @@
 
 # Terraform working directory
 .terraform/
+.terraform.lock.hcl.backup
 
-# Terraform state (NEVER commit)
+# Terraform state files (NEVER commit - use remote backend)
 terraform.tfstate
 terraform.tfstate.*
 *.tfstate
 *.tfstate.*
+terraform.tfstate.backup
 
-# Terraform lock file (safe to commit, do NOT ignore)
-# DO NOT ignore terraform.lock.hcl — required for security & reproducibility
-# terraform.lock.hcl
+# Terraform crash log files
+crash.log
+crash.*.log
 
-# LocalStack internal Terraform provider override
-provider.localstack.tf
+# Terraform plan files (may contain sensitive data)
+*.tfplan
+*.tfplan.*
+tfplan
 
-# Sensitive variable files
-*.tfvars
+# Terraform variable files with sensitive data
+# IMPORTANT: Only ignore files with secrets, not all tfvars
 *.auto.tfvars
+*secret*.tfvars
+*private*.tfvars
+terraform.tfvars.backup
+
+# DO NOT ignore these important files:
+# .terraform.lock.hcl - Required for reproducible builds (COMMIT THIS)
+# environments/*.tfvars - Environment configs (COMMIT THESE)
+
+# LocalStack-specific overrides
+provider.localstack.tf
+*localstack*.tf
+
+# Terraform override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
 
 
 #############################################
@@ -96,8 +117,91 @@ Thumbs.db
 
 
 #############################################
-# Test Files
+# AWS & Cloud Credentials (CRITICAL - NEVER COMMIT)
+#############################################
+
+# AWS credentials
+.aws/
+aws-credentials
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+.envrc
+
+# SSH keys
+id_rsa
+id_rsa.pub
+*.ppk
+
+
+#############################################
+# Terraform Testing & Tools
+#############################################
+
+# Terratest
+*.test
+test_output/
+.test/
+
+# Terraform docs
+.terraform-docs.yml
+
+# Checkov (security scanning)
+.checkov.yaml
+.checkov.yml
+
+# TFLint
+.tflint.hcl
+
+# Infracost
+.infracost/
+
+
+#############################################
+# CI/CD & Automation
+#############################################
+
+# GitHub Actions artifacts
+.github/workflows/*.log
+
+# Build artifacts
+dist/
+build/
+target/
+
+# Temporary CI files
+.ci-temp/
+.pipeline-cache/
+
+
+#############################################
+# Backup & Recovery
+#############################################
+
+# Backup files
+*.backup
+*.bak
+*.old
+*~
+
+# Recovery files
+.recovery/
+recovery.*
+
+
+#############################################
+# Test Files & Samples
 #############################################
 
 test.txt
 test2.txt
+sample-*
+example-*
+*.sample
