@@ -2,31 +2,49 @@
 # Terraform
 #############################################
 
-# Local Terraform directories
+# Terraform working directory
 .terraform/
 
-# Terraform lock/state files (NEVER commit state)
+# Terraform state (NEVER commit)
 terraform.tfstate
 terraform.tfstate.*
 *.tfstate
 *.tfstate.*
 
-# Lock info file created during state operations
-.terraform.tfstate.lock.info
+# Terraform lock file (safe to commit, do NOT ignore)
+# DO NOT ignore terraform.lock.hcl — required for security & reproducibility
+# terraform.lock.hcl
 
-# LocalStack-specific Terraform provider override (DO NOT COMMIT)
+# LocalStack internal Terraform provider override
 provider.localstack.tf
 
-# Sensitive variable files (NEVER commit)
+# Sensitive variable files
 *.tfvars
 *.auto.tfvars
+
+
+#############################################
+# LocalStack Runtime Cache
+#############################################
+
+# LocalStack internal volumes
+terraform/volume/
+localstack/
+.localstack/
+localstack/volume/
+*.localstack
+
+# LocalStack-generated certificates & machine configs
+*.pem
+*.pem.key
+*.pem.crt
+machine.json
 
 
 #############################################
 # Python
 #############################################
 
-# Python cache and compiled files
 __pycache__/
 *.pyc
 *.pyo
@@ -44,20 +62,8 @@ env/
 # Lambda Packaging
 #############################################
 
-# Deployment ZIP files
 lambda/*.zip
 *.zip
-
-
-#############################################
-# LocalStack
-#############################################
-
-# LocalStack internal directories (local debugging only)
-.localstack/
-localstack/
-localstack/volume/
-*.localstack
 
 
 #############################################
