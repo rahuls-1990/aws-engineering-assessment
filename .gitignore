@@ -4,20 +4,29 @@
 
 # Local Terraform directories
 .terraform/
-.terraform.tfstate.lock.info
 
-# Terraform state files (NEVER commit)
+# Terraform lock/state files (NEVER commit state)
 terraform.tfstate
 terraform.tfstate.*
 *.tfstate
 *.tfstate.*
+
+# Lock info file created during state operations
+.terraform.tfstate.lock.info
+
+# LocalStack-specific Terraform provider override (DO NOT COMMIT)
+provider.localstack.tf
 
 # Sensitive variable files (NEVER commit)
 *.tfvars
 *.auto.tfvars
 
 
-# Python cache
+#############################################
+# Python
+#############################################
+
+# Python cache and compiled files
 __pycache__/
 *.pyc
 *.pyo
@@ -25,30 +34,45 @@ __pycache__/
 *.pytest_cache/
 *.coverage
 
-# Virtual environment
+# Virtual environments
 .venv/
-env/
 venv/
+env/
 
-# Lambda deployment packages
+
+#############################################
+# Lambda Packaging
+#############################################
+
+# Deployment ZIP files
 lambda/*.zip
 *.zip
 
 
+#############################################
+# LocalStack
+#############################################
 
-# LocalStack volumes & machine cache
+# LocalStack internal directories (local debugging only)
 .localstack/
 localstack/
-*.localstack
 localstack/volume/
+*.localstack
 
-# Docker build artifacts
+
+#############################################
+# Docker
+#############################################
+
 *.pid
 *.log
 logs/
 docker-data/
 
 
+#############################################
+# IDE / Editor
+#############################################
 
 .vscode/
 .idea/
@@ -56,12 +80,18 @@ docker-data/
 Thumbs.db
 
 
-# Temp files
+#############################################
+# Temp / Misc
+#############################################
+
 *.tmp
 *.bak
 *.swp
 
-# Test files
+
+#############################################
+# Test Files
+#############################################
+
 test.txt
 test2.txt
-
