@@ -68,11 +68,3 @@ resource "aws_lambda_permission" "allow_s3_to_starter" {
   principal     = "s3.amazonaws.com"
   source_arn    = aws_s3_bucket.uploads.arn
 }
-
-output "processor_lambda_arn" {
-  value = aws_lambda_function.file_processor.arn
-}
-
-output "starter_lambda_arn" {
-  value = aws_lambda_function.starter_lambda.arn
-}
