@@ -19,17 +19,24 @@ Architecture Overview:
 ## Why Step Functions?
 - Orchestration, retries, extensibility, visibility
 Components:
-- S3 secure bucket
+- S3 secure bucket or upload bucket
 - DynamoDB encrypted table
 - Lambda starter + processor
 - SNS Alerts
 - Step Functions workflow (external ASL JSON)
 
 ## Testing:
+```shell
+shell
 docker-compose up -d
+terraform init
+terraform validate
+terraform plan
 terraform apply
-awslocal commands for S3, DynamoDB, StepFunctions
-Variables:
-region, alert_email, uploads_bucket_name
-Outputs:
-processor_lambda_arn, starter_lambda_arn, state_machine_arn
+```
+
+- Variables:
+    region, alert_email, uploads_bucket_name
+
+- Outputs:
+    processor_lambda_arn, starter_lambda_arn, state_machine_arn
