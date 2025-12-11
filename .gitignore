@@ -1,29 +1,67 @@
+#############################################
 # Terraform
+#############################################
+
+# Local Terraform directories
 .terraform/
-.terraform.lock.hcl
+.terraform.tfstate.lock.info
+
+# Terraform state files (NEVER commit)
 terraform.tfstate
 terraform.tfstate.*
 *.tfstate
 *.tfstate.*
 
-# Local tooling
-*.log
-*.tmp
+# Sensitive variable files (NEVER commit)
+*.tfvars
+*.auto.tfvars
 
-# Python
+
+# Python cache
 __pycache__/
 *.pyc
-.venv/
+*.pyo
+*.pyd
+*.pytest_cache/
+*.coverage
 
-# Lambda packages
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Lambda deployment packages
+lambda/*.zip
 *.zip
 
-# IDE
+
+
+# LocalStack volumes & machine cache
+.localstack/
+localstack/
+*.localstack
+localstack/volume/
+
+# Docker build artifacts
+*.pid
+*.log
+logs/
+docker-data/
+
+
+
 .vscode/
 .idea/
 .DS_Store
+Thumbs.db
 
-# Test artifacts
+
+# Temp files
+*.tmp
+*.bak
+*.swp
+
+# Test files
 test.txt
 test2.txt
-terraform.tfstate*
+
