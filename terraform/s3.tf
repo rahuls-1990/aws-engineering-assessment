@@ -29,7 +29,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "uploads_sse" {
   }
 }
 
-# Optional: access logging bucket (if you want full prod-ready)
 resource "aws_s3_bucket" "uploads_logs" {
   bucket = "${var.uploads_bucket_name}-logs"
 }
@@ -45,7 +44,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads_lifecycle" {
   bucket = aws_s3_bucket.uploads.id
 
   rule {
-    id     = "expire-older-versions"
+    id     = "expire-old-versions"
     status = "Enabled"
 
     noncurrent_version_expiration {
@@ -63,16 +62,8 @@ resource "aws_s3_bucket_notification" "uploads_notifications" {
     filter_prefix       = "incoming/"
   }
 
-  # Commenting out this lambda to avoid conflict as I was trying to implement two the workflows 
-  # lambda_function {
-  #   lambda_function_arn = aws_lambda_function.file_processor.arn
-  #   events              = ["s3:ObjectCreated:*"]
-  #   filter_prefix       = "processed/"
-  # }
-
   depends_on = [
-    aws_lambda_permission.allow_s3_to_starter,
-    # aws_lambda_permission.allow_s3_to_processor
+    aws_lambda_permission.allow_s3_to_starter
   ]
 }
 
@@ -81,22 +72,20 @@ resource "aws_s3_bucket_policy" "uploads_tls_policy" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "EnforceTLS"
-        Effect    = "Deny"
-        Principal = "*"
-        Action    = "s3:*"
-        Resource = [
-          aws_s3_bucket.uploads.arn,
-          "${aws_s3_bucket.uploads.arn}/*"
-        ]
-        Condition = {
-          Bool = {
-            "aws:SecureTransport" = "false"
-          }
+    Statement = [{
+      Sid    = "EnforceTLS"
+      Effect = "Deny"
+      Principal = "*"
+      Action    = "s3:*"
+      Resource = [
+        aws_s3_bucket.uploads.arn,
+        "${aws_s3_bucket.uploads.arn}/*"
+      ]
+      Condition = {
+        Bool = {
+          "aws:SecureTransport" = "false"
         }
       }
-    ]
+    }]
   })
 }

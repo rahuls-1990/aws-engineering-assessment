@@ -1,4 +1,3 @@
-
 resource "aws_cloudwatch_log_group" "file_processor_logs" {
   name              = "/aws/lambda/file-processor"
   retention_in_days = 3
@@ -30,27 +29,24 @@ resource "aws_lambda_function" "file_processor" {
     }
   }
 
-  depends_on = [
-    aws_cloudwatch_log_group.file_processor_logs
-  ]
+  depends_on = [aws_cloudwatch_log_group.file_processor_logs]
 }
-
 
 resource "aws_cloudwatch_log_group" "starter_lambda_logs" {
   name              = "/aws/lambda/file-upload-starter"
-  retention_in_days = 7
+  retention_in_days = var.log_retention_days
 }
 
 resource "aws_lambda_function" "starter_lambda" {
   function_name = "file-upload-starter"
   handler       = "lambda_starter_handler.lambda_handler"
   runtime       = "python3.12"
+  role          = aws_iam_role.starter_lambda_role.arn
 
-  role             = aws_iam_role.starter_lambda_role.arn
-  timeout          = 10
-  memory_size      = 128
+  timeout     = var.starter_lambda_timeout
+  memory_size = 128
   reserved_concurrent_executions = 5
-
+  
   filename         = "${path.module}/lambda/lambda_starter.zip"
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda_starter.zip")
 
