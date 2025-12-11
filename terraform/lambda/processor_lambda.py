@@ -13,8 +13,16 @@ SNS_TOPIC_ARN = os.environ["SNS_TOPIC_ARN"]
 def lambda_handler(event, context):
     print("Received event:", json.dumps(event))
 
+
+    if "bucket" not in event or "key" not in event:
+        raise ValueError("Invalid event format: expected {bucket, key}")
+
     bucket = event["bucket"]
     key = event["key"]
+
+    # Reject invalid object keys (folders, empty keys)
+    if not key or key.endswith("/"):
+        raise ValueError(f"Invalid S3 object key: {key}")
 
     table = dynamodb.Table(TABLE_NAME)
     timestamp = datetime.utcnow().isoformat()
@@ -36,15 +44,16 @@ def lambda_handler(event, context):
         dynamodb_client = boto3.client("dynamodb")
         desc = dynamodb_client.describe_table(TableName=TABLE_NAME)
 
-        encrypted = desc["Table"]["SSEDescription"]["Status"] == "ENABLED"
+        sse_info = desc["Table"].get("SSEDescription")
+        encrypted = sse_info and sse_info.get("Status") == "ENABLED"
+
         if not encrypted:
-            alert_messages.append(f"DynamoDB table '{TABLE_NAME}' is not encrypted.")
+            alert_messages.append(f"DynamoDB table '{TABLE_NAME}' is NOT encrypted.")
+
     except Exception as e:
         alert_messages.append(f"Could not check DynamoDB encryption: {str(e)}")
 
-    # ---------------------------------------------------
-    # 3. Write file record to DynamoDB
-    # ---------------------------------------------------
+   
     try:
         table.put_item(
             Item={
@@ -56,9 +65,7 @@ def lambda_handler(event, context):
     except Exception as e:
         alert_messages.append(f"Failed to write to DynamoDB: {str(e)}")
 
-    # ---------------------------------------------------
-    # 4. Send SNS alerts (if any)
-    # ---------------------------------------------------
+
     alert_sent = False
 
     for message in alert_messages:
