@@ -205,3 +205,9 @@ test2.txt
 sample-*
 example-*
 *.sample
+
+# Temporary files
+CODE_QUALITY_FIXES.md
+LOCALSTACK_DEPLOYMENT_SUCCESS.md
+EXECUTE_COMMITS.sh
+test-file.txt
